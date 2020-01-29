@@ -4,16 +4,39 @@ base_StatusWord = 2
 base_Diagnosis = 3
 base_ActualPosition = 4
 base_ControlWord = 2049
-base_DeviceMode_workpiece = 2050
+base_DeviceMode_Workpiece = 2050
 base_TeachPosition = 2051
 base_GripForce_PositionTolerance = 2052
 
 def init_gripper(port):
+  modbus_add_signal("10.0.0.5", 255, 2, 2, "StatusWord")
+  modbus_set_signal_update_frequency("StatusWord", 10)
+  modbus_add_signal("10.0.0.5", 255, 3, 2, "Diagnosis")
+  modbus_set_signal_update_frequency("Diagnosis", 10)
+  modbus_add_signal("10.0.0.5", 255, 4, 2, "ActualPosition")
+  modbus_set_signal_update_frequency("ActualPosition", 10)
+  modbus_add_signal("10.0.0.5", 255, 2049, 3, "ControlWord")
+  modbus_set_signal_update_frequency("ControlWord", 10)
+  modbus_add_signal("10.0.0.5", 255, 2050, 3, "DeviceMode_Workpiece")
+  modbus_set_signal_update_frequency("DeviceMode_Workpiece", 10)
+  modbus_add_signal("10.0.0.5", 255, 2051, 3, "TeachPosition")
+  modbus_set_signal_update_frequency("TeachPosition", 10)
+  modbus_add_signal("10.0.0.5", 255, 2052, 3, "GripForce_PositionTolerance")
+  modbus_set_signal_update_frequency("GripForce_PositionTolerance", 10)
+
+  modbus_set_runstate_dependent_choice("ControlWord", 0)
+  modbus_set_runstate_dependent_choice("DeviceMode_Workpiece", 0)
+  modbus_set_runstate_dependent_choice("TeachPosition", 0)
+  modbus_set_runstate_dependent_choice("GripForce_PositionTolerance", 0)
+
+  set_payload(0.5)
+  set_gravity([0.0, 0.0, 9.82])
+
   global iStep = 10
   varmsg("iStep", iStep)
   while True:
     if iStep = 10:
-      if bit_of_word(StatusWord, 6):
+      if bit_of_word(modbus_get_signal_status("StatusWord", False), 6):
         modbus_set_output_register("ControlWord", 1, False)
         iStep = 20
       end
