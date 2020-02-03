@@ -11,7 +11,7 @@ base_GripForce_PositionTolerance = 2052
 def init_gripper(port):
   i = 0
   iStep = 10
-  while (iStep < 110) and (i < 20):
+  while (iStep < 100) and (i < 20):
     if iStep == 10:
       if bit_of_word(modbus_get_signal_status("StatusWord", False), 6):
         modbus_set_output_register("ControlWord", 1, False)
@@ -39,29 +39,46 @@ def init_gripper(port):
     if iStep == 40:
       if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
         modbus_set_output_register("ControlWord", 0, False)
-        iStep = 50
-      end
-    end
-
-    if iStep == 50:
-      if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
-        modbus_set_output_register("ControlWord", 512, False)
         iStep = 100
       end
     end
-
-    if iStep == 100:
-      popup("Initialisierung abgeschlossen")
-      iStep = 110
-    end
-    
+   
     i = i + 1
-    sleep(1)
+    sleep(0.1)
   end
 end
 
 def bit_of_word(word, bit_number):
   return floor(word / pow(2, bit_number)) % 2 != 0
+end
+
+def open_gripper(port):
+  modbus_set_output_register("ControlWord", 256, False)
+end
+
+def close_gripper(port):
+  modbus_set_output_register("ControlWord", 512, False)
+end
+
+def reset_direction_flag(port):
+  modbus_set_output_register("ControlWord", 4, False)
+end
+
+def gripper_is_base_position(port):
+  return bit_of_word(modbus_get_signal_status("StatusWord", False), 8)
+end
+  
+def gripper_is_teach_position(port):
+  return bit_of_word(modbus_get_signal_status("StatusWord", False), 9)
+end
+
+def gripper_is_work_position(port):
+  return bit_of_word(modbus_get_signal_status("StatusWord", False), 10)
+end
+
+def get_actual_position(port):
+  positionWord = modbus_get_signal_status("ActualPosition", False)
+  return positionWord / 100
 end
 
 
