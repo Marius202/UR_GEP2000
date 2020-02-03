@@ -46,6 +46,9 @@ def init_gripper(port):
     i = i + 1
     sleep(0.1)
   end
+  if i >= 20:
+    popup("Could not initialize gripper. Check the electrical connection and diagnosis word for more information.", title="Error from Gripper", error=True, blocking=True)
+  end
 end
 
 def bit_of_word(word, bit_number):
@@ -62,7 +65,15 @@ end
 
 def reset_direction_flag(port):
   modbus_set_output_register("ControlWord", 4, False)
-end
+  i = 0
+  while (not bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) and (not bit_of_word(modbus_get_signal_status("StatusWord", False), 14)) and (i < 100):
+    sleep(0.01)
+    i = i + 1
+  end
+  if i >= 100:
+    varmsg("Gripper Message", "Could not reset the direction flag.")
+  end
+end 
 
 def gripper_is_base_position(port):
   return bit_of_word(modbus_get_signal_status("StatusWord", False), 8)
