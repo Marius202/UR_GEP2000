@@ -92,5 +92,77 @@ def get_actual_position(port):
   return positionWord / 100
 end
 
+def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip_force, position):
+  modbus_set_output_register("DeviceMode_Work", (device_mode *  256 + workpiece_number), False)
+  modbus_set_output_register("GripForce_Posit", (grip_force * 256 + position_tolerance) , False)
+  modbus_set_output_register("TeachPosition", position, False)
+  i = 0
+  iStep = 10
+  while (iStep < 100) and (i < 20):
+    if iStep == 10:
+      modbus_set_output_register("ControlWord", 1, False)
+      iStep = 20
+    end 
+
+    if iStep == 20:
+      if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        modbus_set_output_register("ControlWord", 0, False)
+        iStep = 30
+      end
+    end
+
+    if iStep == 30:
+      if not bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        modbus_set_output_register("ControlWord", 2, False)
+        iStep = 40
+      end
+    end
+
+    if iStep == 40:
+      if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        modbus_set_output_register("ControlWord", 0, False)
+        iStep = 50
+      end
+    end
+
+    if iStep == 50:
+      sleep(1)
+      if not bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        iStep = 100
+      end
+    end
+    i = i + 1
+    sleep(0.1)
+  end
+  if i >= 20:
+    varmsg("Gripper Message", "Could not write recipe.")
+  end
+end
+
+def gripper_load_recipe(workpiece_number):
+  modbus_set_output_register("DeviceMode_Work", workpiece_number, False)
+  i = 0
+  iStep = 10
+  while (iStep < 100) and (i < 20):
+    if iStep == 10:
+      modbus_set_output_register("ControlWord", 1, False)
+      iStep = 20
+    end 
+
+    if iStep == 20:
+      if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        modbus_set_output_register("ControlWord", 0, False)
+        iStep = 30
+      end
+    end
+
+    if iStep == 30:
+      if not bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        modbus_set_output_register("ControlWord", 2, False)
+        iStep = 100
+      end
+    end
+  end
+end
 
 init_gripper(1)
