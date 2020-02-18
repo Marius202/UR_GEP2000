@@ -1,3 +1,10 @@
+# Constants
+teach_pos_1 = 100
+teach_pos_2 = 200
+wp_no_1 = 2
+wp_no_2 = 5
+
+
 # Convert boolean to string
 def bool_to_string(bool):
   if bool:
@@ -10,13 +17,154 @@ end
 # Check the status of the gripper
 def init_ok():
   gripper_plc_active = bit_of_word(modbus_get_signal_status("StatusWord", False), 6)
-  no_error = bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+  no_error = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
   valid = gripper_plc_active and (no_error)
 
   textmsg("Gripper initialization test: ", valid)
   textmsg("..Gripper-PLC active:        ", gripper_plc_active)
   textmsg("..No error:                  ", no_error)
+  if (not valid):
+    popup("Gripper is not initialized correctly.", title = "Error during init_ok()", error = True)
+  end
 
   return valid
 end
 
+# Close gripper and check posiotion
+def gripper_work_pos_ok():
+  gripper_close()
+  sleep(1)
+  valid = gripper_is_work_position()
+  textmsg("Gripper at work position:    ", valid)
+  if (not valid):
+    popup("Could not close gripper", title = "Error during gripper_work_pos_ok()", error = True)
+  end
+  return valid
+end
+
+# Open gripper and check position
+def gripper_base_pos_ok():
+  gripper_open()
+  sleep(1)
+  valid = gripper_is_base_position()
+  textmsg("Gripper at base position:    ", valid)
+  if (not valid):
+    popup("Could not open gripper", title = "Error during gripper_base_pos_ok()", error = True)
+  end
+  return valid
+end
+
+# Write recipe and check if any errors occur
+def write_recipe_ok():
+  gripper_write_recipe(100, wp_no_1, 20, 4, teach_pos_1)
+  no_error_1 = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+
+  gripper_write_recipe(100, wp_no_2, 20, 1, teach_pos_2)
+  no_error_2 = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+  valid = no_error_1 and no_error_2
+
+  textmsg("Write recipe ok:              ", valid)
+  textmsg("..Write 1st workpiece recipe: ", no_error_1)
+  textmsg("..Write 2nd workpiece recipe: ", no_error_2)
+
+  if (not valid):
+    popup("Could not write recipe", title = "Error during write_recipe_ok()", error = True)
+  end
+  return valid
+end
+
+# Request power cycle from operator and validate
+def power_cycle_gripper():
+  popup("Power cycle gripper", title = "Operator interaction", blocking = True)
+  error = bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+  no_initial_handshake = (modbus_get_signal_status("StatusWord", False) == 786)
+  vaild = error and no_initial_handshake
+
+  textmsg("Power cylce ok:               ", valid)
+
+  if (not valid):
+    popup("Gripper was not power cycled.", title = "Error during power_cycle_gripper()", error = True)
+  end
+  return valid
+end
+
+def gripper_teach_pos_ok():
+  popup("Put workpiece 1 between jaws", title = "Operator interaction", blocking = True)
+  gripper_close()
+  sleep(1)
+  valid = gripper_is_teach_position()
+  textmsg("Gripper at teach position:    ", valid)
+  if (not valid):
+    popup("Could not open gripper", title = "Error during gripper_base_pos_ok()", error = True)
+  end
+  return valid
+end
+
+
+def run_tests():
+  iStep = 10
+  while iStep < 100:
+    # Check if the gripper is initilized correctly.
+    if iStep == 10:
+      if (not init_ok()):
+        return False
+      end
+      iStep = 15
+    end
+
+    # Check if gripper is open.
+    if iStep == 15:
+      if gripper_is_base_position():
+        iStep = 40
+      else:
+        iStep = 20
+      end
+    end
+
+    # Open the gripper.
+    if iStep == 20:
+      gripper_open()
+      iStep = 30
+    end
+
+    # Check if gripper is open.
+    if iStep == 30:
+      if gripper_is_base_position():
+        iStep = 40
+      end
+    end
+
+    # Gripper work position test.
+    if iStep == 40:
+      if (not gripper_work_pos_ok()):
+        return False
+      end
+      iStep = 50
+    end
+
+    # Gripper base position test.
+    if iStep == 50:
+      if (not gripper_base_pos_ok()):
+        return False
+      end
+      iStep = 60
+    end
+
+    # Write workpiece recipe.
+    if iStep == 60:
+      if (not write_recipe_ok()):
+        return False
+      end
+      iStep = 70
+    end
+
+    # Power cycle gripper.
+    if iStep == 70:
+      if (not power_cycle_gripper()):
+        return False
+      end
+      iStep = 80
+    end
+
+    return True
+  end
