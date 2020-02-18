@@ -1,14 +1,4 @@
-ip_master = "10.0.0.5"
-
-base_StatusWord = 2
-base_Diagnosis = 3
-base_ActualPosition = 4
-base_ControlWord = 2049
-base_DeviceMode_Workpiece = 2050
-base_TeachPosition = 2051
-base_GripForce_PositionTolerance = 2052
-
-def init_gripper(port):
+def gripper_init():
   i = 0
   iStep = 10
   while (iStep < 100) and (i < 20):
@@ -18,7 +8,7 @@ def init_gripper(port):
         iStep = 20
       end
     end
-    
+
     if iStep == 20:
       if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
         modbus_set_output_register("ControlWord", 0, False)
@@ -35,19 +25,19 @@ def init_gripper(port):
       end
     end
 
-  
+
     if iStep == 40:
       if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
         modbus_set_output_register("ControlWord", 0, False)
         iStep = 100
       end
     end
-   
+
     i = i + 1
     sleep(0.1)
   end
   if i >= 20:
-    popup("Could not initialize gripper. Check the electrical connection and diagnosis word for more information.", title="Error from Gripper", error=True, blocking=True)
+    popup("Could not initialize gripper. Check the electrical connection and diagnosis word for more information.", title = "Error from Gripper", error = True, blocking = True)
   end
 end
 
@@ -55,15 +45,15 @@ def bit_of_word(word, bit_number):
   return floor(word / pow(2, bit_number)) % 2 != 0
 end
 
-def open_gripper(port):
+def gripper_open():
   modbus_set_output_register("ControlWord", 256, False)
 end
 
-def close_gripper(port):
+def gripper_close():
   modbus_set_output_register("ControlWord", 512, False)
 end
 
-def reset_direction_flag(port):
+def gripper_reset_direction_flag():
   modbus_set_output_register("ControlWord", 4, False)
   i = 0
   while (not bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) and (not bit_of_word(modbus_get_signal_status("StatusWord", False), 14)) and (i < 100):
@@ -73,28 +63,28 @@ def reset_direction_flag(port):
   if i >= 100:
     varmsg("Gripper Message", "Could not reset the direction flag.")
   end
-end 
+end
 
-def gripper_is_base_position(port):
+def gripper_is_base_position():
   return bit_of_word(modbus_get_signal_status("StatusWord", False), 8)
 end
-  
-def gripper_is_teach_position(port):
+
+def gripper_is_teach_position():
   return bit_of_word(modbus_get_signal_status("StatusWord", False), 9)
 end
 
-def gripper_is_work_position(port):
+def gripper_is_work_position():
   return bit_of_word(modbus_get_signal_status("StatusWord", False), 10)
 end
 
-def get_actual_position(port):
+def gripper_get_actual_position():
   positionWord = modbus_get_signal_status("ActualPosition", False)
   return positionWord / 100
 end
 
 def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip_force, position):
-  modbus_set_output_register("DeviceMode_Work", (device_mode *  256 + workpiece_number), False)
-  modbus_set_output_register("GripForce_Posit", (grip_force * 256 + position_tolerance) , False)
+  modbus_set_output_register("DeviceMode_Work", (device_mode * 256 + workpiece_number), False)
+  modbus_set_output_register("GripForce_Posit", (grip_force * 256 + position_tolerance), False)
   modbus_set_output_register("TeachPosition", position, False)
   i = 0
   iStep = 10
@@ -102,7 +92,7 @@ def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip
     if iStep == 10:
       modbus_set_output_register("ControlWord", 1, False)
       iStep = 20
-    end 
+    end
 
     if iStep == 20:
       if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
@@ -147,7 +137,7 @@ def gripper_load_recipe(workpiece_number):
     if iStep == 10:
       modbus_set_output_register("ControlWord", 1, False)
       iStep = 20
-    end 
+    end
 
     if iStep == 20:
       if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
@@ -165,4 +155,4 @@ def gripper_load_recipe(workpiece_number):
   end
 end
 
-init_gripper(1)
+gripper_init()
