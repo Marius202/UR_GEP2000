@@ -1,0 +1,22 @@
+# Convert boolean to string
+def bool_to_string(bool):
+  if bool:
+    return "True"
+  else:
+    return "False"
+  end
+end
+
+# Check the status of the gripper
+def init_ok():
+  gripper_plc_active = bit_of_word(modbus_get_signal_status("StatusWord", False), 6)
+  no_error = bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+  valid = gripper_plc_active and (no_error)
+
+  textmsg("Gripper initialization test: ", valid)
+  textmsg("..Gripper-PLC active:        ", gripper_plc_active)
+  textmsg("..No error:                  ", no_error)
+
+  return valid
+end
+
