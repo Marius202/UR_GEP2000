@@ -79,7 +79,7 @@ end
 
 def gripper_get_actual_position():
   positionWord = modbus_get_signal_status("ActualPosition", False)
-  return positionWord / 100
+  return positionWord
 end
 
 def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip_force, position):
