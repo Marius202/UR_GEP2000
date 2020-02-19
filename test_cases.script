@@ -1,8 +1,12 @@
 # Constants
-teach_pos_1 = 100
-teach_pos_2 = 200
+base_pos = 0
+work_pos = 2064
+tolerance = 20
+teach_pos_1 = 1754 # 3 Lego-lengths
+teach_pos_2 = 964  # 2 Lego-lengths
 wp_no_1 = 2
 wp_no_2 = 5
+
 
 
 # Convert boolean to string
@@ -77,8 +81,8 @@ end
 def power_cycle_gripper():
   popup("Power cycle gripper", title = "Operator interaction", blocking = True)
   error = bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
-  no_initial_handshake = (modbus_get_signal_status("StatusWord", False) == 786)
-  vaild = error and no_initial_handshake
+  #no_initial_handshake = (modbus_get_signal_status("Diagnosis", False) == 786)
+  valid = error
 
   textmsg("Power cylce ok:               ", valid)
 
@@ -88,19 +92,87 @@ def power_cycle_gripper():
   return valid
 end
 
-def gripper_teach_pos_ok():
+# Load recipes and check if the teach position is reached
+def load_recipe_ok():
+  gripper_load_recipe(wp_no_1)
+  no_error_1 = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
   popup("Put workpiece 1 between jaws", title = "Operator interaction", blocking = True)
   gripper_close()
   sleep(1)
-  valid = gripper_is_teach_position()
-  textmsg("Gripper at teach position:    ", valid)
+  teach_1 = gripper_is_teach_position()
+  gripper_open()
+  sleep(1)
+
+  gripper_load_recipe(wp_no_2)
+  no_error_2 = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+  popup("Put workpiece 2 between jaws", title = "Operator interaction", blocking = True)
+  gripper_close()
+  sleep(1)
+  teach_2 = gripper_is_teach_position()
+  gripper_open()
+  sleep(1)
+
+  valid = no_error_1 and no_error_2 and teach_1 and teach_2
+
+  textmsg("Load recipe ok:               ", valid)
+  textmsg("..No error on loading wp 1:   ", no_error_1)
+  textmsg("..Teach position 1 reached:   ", teach_1)
+  textmsg("..No error on loading wp 2:   ", no_error_2)
+  textmsg("..Teach position 2 reached:   ", teach_2)
+
   if (not valid):
-    popup("Could not open gripper", title = "Error during gripper_base_pos_ok()", error = True)
+    popup("Could not load recipe or reach teach position", title = "Error during load_recipe_ok()", error = True)
   end
   return valid
 end
 
+def actual_position_ok():
+  actual_pos = gripper_get_actual_position()
+  base_pos_ok = (actual_pos <= (base_pos + tolerance)) or (actual_pos >= (base_pos - tolerance))
+  gripper_close()
+  sleep(1)
+  teach_pos_ok = (actual_pos <= (teach_pos_2 + tolerance)) or (actual_pos >= (teach_pos_2 - tolerance))
+  gripper_open()
+  sleep(1)
 
+  valid = base_pos_ok and teach_pos_ok
+
+  textmsg("Read actual position ok:      ", valid)
+  textmsg("..Base position ok:           ", base_pos_ok)
+  textmsg("..Teach position ok:          ", teach_pos_ok)
+
+  if (not valid):
+    popup("Could not read the correct position.", title = "Error during actual_position_ok()", error = True)
+  end
+  return valid
+end
+
+def reset_dir_flag_ok():
+  dir_flag_set = (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or 
+  (bit_of_word(modbus_get_signal_status("StatusWord", False), 14))
+  gripper_reset_direction_flag()
+  sleep(0.2)
+  dir_flag_reset = not (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or 
+  (bit_of_word(modbus_get_signal_status("StatusWord", False), 14))
+
+  gripper_open()
+  sleep(1)
+
+  no_error = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
+  valid = dir_flag_set and dir_flag_reset and no_error
+
+  textmsg("Reset direction flag ok:      ", valid)
+  textmsg("..Direction flag set:         ", dir_flag_set)
+  textmsg("..Direction flag reset:       ", dir_flag_reset)
+  textmsg("..No error:                   ", no_error)
+
+  if (not valid):
+    popup("Could not reset direction flag.", title = "Error during reset_dir_flag_ok()", error = True)
+  end
+  return valid
+end
+
+# Run all test cases
 def run_tests():
   iStep = 10
   while iStep < 100:
@@ -112,7 +184,7 @@ def run_tests():
       iStep = 15
     end
 
-    # Check if gripper is open.
+    # Check if the gripper is open.
     if iStep == 15:
       if gripper_is_base_position():
         iStep = 40
@@ -166,5 +238,33 @@ def run_tests():
       iStep = 80
     end
 
-    return True
+    # Load recipes and check if the teach position is reached
+    if iStep == 80:
+      if (not load_recipe_ok()):
+        return False
+      end
+      iStep = 90
+    end
+
+    # get actual position
+    if iStep == 90:
+      if (not actual_position_ok()):
+        return False
+      end
+      iStep = 100
+    end
+
+    # reset direction flag
+    if iStep == 100:
+      if (not reset_dir_flag_ok()):
+        return False
+      end
+      iStep = 200
+    end
+
+    if iStep == 200:
+      popup("All tests finished successfully!")
+      return True
+    end
   end
+end
