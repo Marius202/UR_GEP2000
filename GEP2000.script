@@ -19,7 +19,7 @@ def gripper_init():
     if iStep == 30:
       if not bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
         modbus_set_output_register("DeviceMode_Work", 25600, False)
-        modbus_set_output_register("GripForce_Posit", 256, False)
+        modbus_set_output_register("GripForce_Posit", 276, False)
         modbus_set_output_register("ControlWord", 1, False)
         iStep = 40
       end
@@ -82,10 +82,10 @@ def gripper_get_actual_position():
   return positionWord
 end
 
-def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip_force, position):
+def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip_force, teach_position):
   modbus_set_output_register("DeviceMode_Work", (device_mode * 256 + workpiece_number), False)
   modbus_set_output_register("GripForce_Posit", (grip_force * 256 + position_tolerance), False)
-  modbus_set_output_register("TeachPosition", position, False)
+  modbus_set_output_register("TeachPosition", teach_position, False)
   i = 0
   iStep = 10
   while (iStep < 100) and (i < 20):
@@ -129,29 +129,37 @@ def gripper_write_recipe(device_mode, workpiece_number, position_tolerance, grip
   end
 end
 
-def gripper_load_recipe(workpiece_number):
-  modbus_set_output_register("DeviceMode_Work", workpiece_number, False)
+def gripper_load_recipe(device_mode, workpiece_number):
   i = 0
   iStep = 10
   while (iStep < 100) and (i < 20):
     if iStep == 10:
-      modbus_set_output_register("ControlWord", 1, False)
+      modbus_set_output_register("DeviceMode_Work", (device_mode * 256 + workpiece_number), False)
       iStep = 20
     end
 
     if iStep == 20:
-      if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
-        modbus_set_output_register("ControlWord", 0, False)
-        iStep = 30
-      end
+      modbus_set_output_register("ControlWord", 1, False)
+      iStep = 30
     end
 
     if iStep == 30:
+      if bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
+        modbus_set_output_register("ControlWord", 0, False)
+        iStep = 40
+      end
+    end
+
+    if iStep == 40:
       if not bit_of_word(modbus_get_signal_status("StatusWord", False), 12):
-        modbus_set_output_register("ControlWord", 2, False)
         iStep = 100
       end
     end
+    i = i + 1
+    sleep(0.1)
+  end
+  if i >= 20:
+    varmsg("Gripper Message", "Could not load recipe.")
   end
 end
 
