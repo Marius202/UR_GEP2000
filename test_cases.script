@@ -2,8 +2,8 @@
 base_pos = 0
 work_pos = 2064
 tolerance = 20
-teach_pos_1 = 1754 # 3 Lego-lengths
-teach_pos_2 = 964  # 2 Lego-lengths
+teach_pos_1 = 1754 # 2 Lego-lengths
+teach_pos_2 = 964  # 3 Lego-lengths
 wp_no_1 = 2
 wp_no_2 = 5
 
@@ -34,7 +34,7 @@ def init_ok():
   return valid
 end
 
-# Close gripper and check posiotion
+# Close gripper and check position
 def gripper_work_pos_ok():
   gripper_close()
   sleep(1)
@@ -82,7 +82,8 @@ def power_cycle_gripper():
   popup("Power cycle gripper", title = "Operator interaction", blocking = True)
   error = bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
   #no_initial_handshake = (modbus_get_signal_status("Diagnosis", False) == 786)
-  valid = error
+  gripper_init()
+  valid = error and init_ok()
 
   textmsg("Power cylce ok:               ", valid)
 
@@ -94,7 +95,7 @@ end
 
 # Load recipes and check if the teach position is reached
 def load_recipe_ok():
-  gripper_load_recipe(wp_no_1)
+  gripper_load_recipe(100, wp_no_1)
   no_error_1 = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
   popup("Put workpiece 1 between jaws", title = "Operator interaction", blocking = True)
   gripper_close()
@@ -103,7 +104,7 @@ def load_recipe_ok():
   gripper_open()
   sleep(1)
 
-  gripper_load_recipe(wp_no_2)
+  gripper_load_recipe(100, wp_no_2)
   no_error_2 = not bit_of_word(modbus_get_signal_status("StatusWord", False), 15)
   popup("Put workpiece 2 between jaws", title = "Operator interaction", blocking = True)
   gripper_close()
@@ -148,11 +149,11 @@ def actual_position_ok():
 end
 
 def reset_dir_flag_ok():
-  dir_flag_set = (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or 
+  dir_flag_set = (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or
   (bit_of_word(modbus_get_signal_status("StatusWord", False), 14))
   gripper_reset_direction_flag()
   sleep(0.2)
-  dir_flag_reset = not (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or 
+  dir_flag_reset = not (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or
   (bit_of_word(modbus_get_signal_status("StatusWord", False), 14))
 
   gripper_open()
@@ -175,7 +176,7 @@ end
 # Run all test cases
 def run_tests():
   iStep = 10
-  while iStep < 100:
+  while iStep < 300:
     # Check if the gripper is initilized correctly.
     if iStep == 10:
       if (not init_ok()):
@@ -266,5 +267,7 @@ def run_tests():
       popup("All tests finished successfully!")
       return True
     end
+
+    sleep(0.1)
   end
 end
