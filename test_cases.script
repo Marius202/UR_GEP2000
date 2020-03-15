@@ -148,6 +148,7 @@ def actual_position_ok():
   return valid
 end
 
+# Reset the direction flag
 def reset_dir_flag_ok():
   dir_flag_set = (bit_of_word(modbus_get_signal_status("StatusWord", False), 13)) or
   (bit_of_word(modbus_get_signal_status("StatusWord", False), 14))
